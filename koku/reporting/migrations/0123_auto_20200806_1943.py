@@ -18,4 +18,11 @@ class Migration(migrations.Migration):
             name="infrastructure_raw_cost",
             field=models.DecimalField(decimal_places=15, default=0, max_digits=33),
         ),
+        migrations.RunSQL(
+            """
+ALTER TABLE reporting_ocpusagelineitem_daily_summary
+ALTER COLUMN infrastructure_project_raw_cost set default 0::numeric,
+ALTER COLUMN infrastructure_raw_cost set default 0::numeric;
+            """
+        ),
     ]
