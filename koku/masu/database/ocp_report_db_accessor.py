@@ -595,12 +595,8 @@ class OCPReportDBAccessor(ReportDBAccessorBase):
             OCPUsageLineItemDailySummary.objects.filter(
                 cluster_id=cluster_id, usage_start__gte=start_date, usage_start__lte=end_date
             ).update(
-                infrastructure_markup_cost=(
-                    (Coalesce(F("infrastructure_raw_cost"), Value(0, output_field=DecimalField()))) * markup
-                ),
-                infrastructure_project_markup_cost=(
-                    (Coalesce(F("infrastructure_project_raw_cost"), Value(0, output_field=DecimalField()))) * markup
-                ),
+                infrastructure_markup_cost=(F("infrastructure_raw_cost") * markup),
+                infrastructure_project_markup_cost=(F("infrastructure_project_raw_cost") * markup),
             )
 
     def get_distinct_nodes(self, start_date, end_date, cluster_id):

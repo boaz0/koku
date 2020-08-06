@@ -282,9 +282,9 @@ class OCPUsageLineItemDailySummary(models.Model):
     # Cost fields
 
     # Infrastructure raw cost comes from a Cloud Provider
-    infrastructure_raw_cost = models.DecimalField(max_digits=33, decimal_places=15, null=True)
+    infrastructure_raw_cost = models.DecimalField(max_digits=33, decimal_places=15, null=False, default=0)
 
-    infrastructure_project_raw_cost = models.DecimalField(max_digits=33, decimal_places=15, null=True)
+    infrastructure_project_raw_cost = models.DecimalField(max_digits=33, decimal_places=15, null=False, default=0)
 
     infrastructure_usage_cost = JSONField(null=True)
 
