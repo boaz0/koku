@@ -185,7 +185,7 @@ class RateSerializer(serializers.Serializer):
     cost_type = serializers.ChoiceField(choices=metric_constants.COST_TYPE_CHOICES)
     description = serializers.CharField(allow_blank=True, max_length=100, required=False)
     tiered_rates = serializers.ListField(required=False)
-    tag_rates = serializers.ListField(required=False)
+    tag_rates = serializers.DictField(required=False)
 
     @property
     def metric_map(self):
@@ -263,12 +263,11 @@ class RateSerializer(serializers.Serializer):
 
     def validate_tag_rates(self, tag_rates):
         """Run validation for rates."""
-        validated_rates = []
-        for rate in tag_rates:
-            serializer = TagRateSerializer(data=rate)
-            serializer.is_valid(raise_exception=True)
-            validated_rates.append(serializer.validated_data)
-        return validated_rates
+        if tag_rates is None:
+            return None
+        serializer = TagRateSerializer(data=tag_rates)
+        serializer.is_valid(raise_exception=True)
+        return serializer.validated_data
 
     def validate_tiered_rates(self, tiered_rates):
         """Force validation of tiered rates."""
@@ -292,30 +291,29 @@ class RateSerializer(serializers.Serializer):
 
     def validate(self, data):
         """Validate that a rate must be defined."""
+        rate_key_error = None
+        rate_types_list = [data.get(rate_key, None) for rate_key in self.RATE_TYPES]
+        if not any(rate_types_list):
+            rate_key_error = f"Missing rate information: specify one of {self.RATE_TYPES}."
+        elif all(rate_types_list):
+            rate_key_error = f"More than one rate key: need to specify only one of {self.RATE_TYPES}."
+        if rate_key_error:
+            raise serializers.ValidationError(rate_key_error)
+
         tiered_rates = self.validate_tiered_rates(data.get("tiered_rates", []))
-        tag_rates = self.validate_tag_rates(data.get("tag_rates", []))
+        tag_rates = self.validate_tag_rates(data.get("tag_rates", None))
         if tiered_rates:
             data["tiered_rates"] = tiered_rates
+            RateSerializer._validate_continuouse_tiers(tiered_rates)
         if tag_rates:
             data["tag_rates"] = tag_rates
 
-        rate_keys_str = ", ".join(str(rate_key) for rate_key in self.RATE_TYPES)
-        if data.get("metric").get("name") not in [metric for metric, metric2 in metric_constants.METRIC_CHOICES]:
+        if data.get("metric").get("name") not in [metric for metric, _ in metric_constants.METRIC_CHOICES]:
             error_msg = "{} is an invalid metric".format(data.get("metric").get("name"))
             raise serializers.ValidationError(error_msg)
 
         data["cost_type"] = self.validate_cost_type(data.get("metric").get("name"), data.get("cost_type"))
-
-        if any(data.get(rate_key) is not None for rate_key in self.RATE_TYPES):
-            if tiered_rates == [] and tag_rates == []:
-                error_msg = f"A rate must be provided IF (e.g. {rate_keys_str})."
-                raise serializers.ValidationError(error_msg)
-            elif tiered_rates is not None and tiered_rates != []:
-                RateSerializer._validate_continuouse_tiers(tiered_rates)
-            return data
-        else:
-            error_msg = f"A rate must be provided ELSE (e.g. {rate_keys_str})."
-            raise serializers.ValidationError(error_msg)
+        return data
 
     def to_representation(self, rate_obj):
         """Create external representation of a rate."""
@@ -347,12 +345,11 @@ class RateSerializer(serializers.Serializer):
             out.update({"tiered_rates": tiered_rates, "cost_type": rate_obj.get("cost_type")})
             return out
 
-        tag_rates = rate_obj.get("tag_rates", [])
+        tag_rates = rate_obj.get("tag_rates", None)
         if tag_rates:
-            for rate in tag_rates:
-                tag_values = rate.get("tag_values", [])
-                for tag_value in tag_values:
-                    TagRateSerializer._convert_to_decimal(tag_value)
+            tag_values = tag_rates.get("tag_values", [])
+            for tag_value in tag_values:
+                TagRateSerializer._convert_to_decimal(tag_value)
             out.update({"tag_rates": tag_rates, "cost_type": rate_obj.get("cost_type")})
         return out
 
