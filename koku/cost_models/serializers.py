@@ -317,7 +317,10 @@ class RateSerializer(serializers.Serializer):
 
     def to_representation(self, rate_obj):
         """Create external representation of a rate."""
-        out = {"metric": {"name": rate_obj.get("metric", {}).get("name")}, "description": rate_obj.get("description", "")}
+        out = {
+            "metric": {"name": rate_obj.get("metric", {}).get("name")},
+            "description": rate_obj.get("description", ""),
+        }
 
         # Specifically handling only tiered rates now
         # with the expectation that this code will be generalized
