@@ -183,6 +183,7 @@ class RateSerializer(serializers.Serializer):
 
     metric = serializers.DictField(required=True)
     cost_type = serializers.ChoiceField(choices=metric_constants.COST_TYPE_CHOICES)
+    description = serializers.CharField(allow_blank=True, max_length=100, required=False)
     tiered_rates = serializers.ListField(required=False)
     tag_rates = serializers.ListField(required=False)
 
@@ -318,7 +319,7 @@ class RateSerializer(serializers.Serializer):
 
     def to_representation(self, rate_obj):
         """Create external representation of a rate."""
-        out = {"metric": {"name": rate_obj.get("metric", {}).get("name")}}
+        out = {"metric": {"name": rate_obj.get("metric", {}).get("name")}, "description": rate_obj.get("description", "")}
 
         # Specifically handling only tiered rates now
         # with the expectation that this code will be generalized
