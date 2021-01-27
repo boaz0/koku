@@ -237,6 +237,21 @@ def construct_parquet_reports(request_id, context, report_meta, payload_destinat
     return daily_parquet_files
 
 
+def clean_invalid_csv(dir_path):
+    for (_, _, filenames) = os.walk(dir_path):
+        csv_reports = [fl for fl in filenames if fl.endswith('.csv')]
+        for csv_report in csv_reports:
+            try:
+                pd.read_csv(fl)
+            except Exception as error:
+                LOG.warning(f"File {fl} is not a valid CSV file. Reason: {str(error)}")
+                LOG.debug(f"Removing file {fl} because it is invalid CSV")
+                try:
+                    os.remove(fl)
+                except Exception as rmError:
+                    LOG.warning(f"Failed removing file {fl}. Reason: {str(rmError)}")
+
+
 # pylint: disable=too-many-locals
 def extract_payload(url, request_id, context={}):  # noqa: C901
     """
@@ -287,6 +302,7 @@ def extract_payload(url, request_id, context={}):  # noqa: C901
 
     """
     temp_dir, temp_file_path, temp_file = download_payload(request_id, url, context)
+    clean_invalid_csv(temp_dir)
     manifest_path = extract_payload_contents(request_id, temp_dir, temp_file_path, temp_file, context)
 
     # Open manifest.json file and build the payload dictionary.
